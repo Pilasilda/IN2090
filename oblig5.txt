@@ -1,0 +1,163 @@
+-- Oppgave 1: rollefigurnavn, antallganger rollefigurnavnet forekommer i tabellen
+select filmcharacter, count(*) as antallForekomster
+from filmcharacter
+group by filmcharacter
+--som where, men where kan ikke bruke aggregat derfor having
+Having count (filmcharacter) > 2000
+order by count (*) DESC;
+
+--Oppgave 2A
+select film.title, film.prodyear, person.firstname, person.lastname, filmparticipation.parttype
+FROM filmparticipation
+INNER JOIN person  ON filmparticipation.personid = person.personid
+INNER JOIN film ON filmparticipation.filmid = film.filmid
+WHERE firstname LIKE 'Stanley' AND lastname LIKE 'Kubrick' AND parttype LIKE 'director';
+
+--Oppgave 2B
+select f.title, f.prodyear, p.firstname, p.lastname, fp.parttype
+FROM filmparticipation fp
+NATURAL JOIN person p
+NATURAL JOIN film f
+WHERE firstname LIKE 'Stanley' AND lastname LIKE 'Kubrick' AND parttype LIKE 'director';
+
+-- Oppgave 2C
+select f.title, f.prodyear, p.firstname, p.lastname, fp.parttype
+FROM Filmparticipation fp, Film f, Person p
+WHERE fp.personid = p.personid AND fp.filmid = f.filmid
+AND firstname LIKE 'Stanley' AND lastname LIKE 'Kubrick' AND parttype LIKE 'director';
+
+-- Oppgave 3
+-- || ' ' || splitter brukes til å navngi relasjoner med aliaser eks: firstname || ‘_’ || lastname as name
+SELECT firstname || ' ' || lastname AS name, personid, title, country
+from filmparticipation
+  natural join filmcharacter
+  natural join film
+  natural join person
+  natural join filmcountry
+WHERE filmcharacter LIKE 'Ingrid' AND firstname LIKE 'Ingrid';
+
+
+-- Oppgave 4
+select film.filmid, film.title, count(filmgenre.genre) as antallGenre
+From film left join filmgenre on film.filmid = filmgenre.filmid
+WHERE title LIKE '%Antoine %' group by film.filmid, film.title;
+
+-- Oppgave 5
+select DISTINCT f.title, fp.parttype, count(fp.parttype) as antalldeltagere
+FROM filmparticipation fp
+NATURAL JOIN film f
+NATURAL JOIN filmitem
+WHERE f.title LIKE '%Lord of the Rings%' AND filmtype Like 'C'
+group by f.title, fp.parttype;
+
+-- Oppgave 6
+select title, prodyear FROM film
+WHERE prodyear = (
+  select MIN(prodyear)
+  FROM film);
+
+--- Oppgave 7
+SELECT DISTINCT f.title, f.prodyear, g.genre as genre_1, g2.genre as genre_2
+FROM film AS f,
+  filmgenre as g,
+  filmgenre as g2
+WHERE f.filmid = g.filmid
+  AND g.filmid = g2.filmid
+  AND g.genre = 'Film-Noir'
+  AND g2.genre = 'Comedy';
+
+-- Oppgave 8
+(select title, prodyear FROM film
+  WHERE prodyear = (
+    select MIN(prodyear)
+    FROM film))
+
+UNION ALL
+
+(SELECT DISTINCT f.title, f.prodyear
+  FROM film AS f,
+    filmgenre as g,
+    filmgenre as g2
+  WHERE f.filmid = g.filmid
+    AND g.filmid = g2.filmid
+    AND g.genre = 'Film-Noir'
+    AND g2.genre = 'Comedy');
+
+
+
+
+
+
+-- Oppgave 9
+SELECT film.title, film.prodyear
+FROM filmparticipation
+INNER JOIN person  ON filmparticipation.personid = person.personid
+INNER JOIN film ON filmparticipation.filmid = film.filmid
+WHERE firstname LIKE 'Stanley'
+AND lastname LIKE 'Kubrick'
+AND parttype LIKE 'director'
+
+intersect
+
+SELECT film.title, film.prodyear
+FROM filmparticipation
+INNER JOIN person  ON filmparticipation.personid = person.personid
+INNER JOIN film ON filmparticipation.filmid = film.filmid
+WHERE firstname LIKE 'Stanley'
+AND lastname LIKE 'Kubrick'
+AND parttype LIKE 'cast';
+
+
+--oppgave 10
+SELECT f.votes, f.rank, s.maintitle
+FROM filmrating f
+INNER JOIN series s on f.filmid = s.seriesid
+WHERE votes > 1000
+AND f.rank = (
+  SELECT MAX(rank)
+  FROM filmrating where votes > 1000)
+GROUP BY f.votes, f.rank, s.maintitle;
+
+
+-- Oppgave 11
+SELECT country, count(*)
+FROM filmcountry
+GROUP BY country
+HAVING count(*) = 1;
+
+
+-- Oppgave 12
+WITH u_character AS(
+  SELECT fc.partid, ur.filmcharacter
+  FROM(
+    SELECT filmcharacter, count(*)
+    FROM filmcharacter
+    GROUP BY filmcharacter
+    HAVING count(*) = 1
+  ) AS ur,
+  filmcharacter AS fc
+WHERE ur.filmcharacter = fc.filmcharacter
+)
+
+SELECT firstname || ' ' || lastname AS name, count(*) AS num_unique
+FROM person
+  NATURAL JOIN filmparticipation
+  NATURAL JOIN u_character
+GROUP BY name
+HAVING count(*)> 199
+ORDER BY num_unique DESC;
+
+
+-- Oppgave 13
+SELECT DISTINCT p.firstname, p.lastname
+from person p
+INNER JOIN filmparticipation fp
+ON fp.personid = p.personid
+INNER JOIN filmrating fr
+ON fr.filmid = fp.filmid
+WHERE fr.votes > any(select votes from filmrating where votes  >= 60000 AND rank >= 8)
+  AND fr.rank > any(select rank from filmrating where rank >= 8 and votes >= 60000)
+   AND fp.parttype IN(select flm.parttype from filmparticipation flm inner join person on
+  person.personid = flm.personid INNER JOIN filmrating
+ON filmrating.filmid = flm.filmid where flm.parttype like 'director'
+AND filmrating.rank >= 8);

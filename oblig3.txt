@@ -1,0 +1,83 @@
+/*Obligatorisk oppgave 2*/
+-- Oppgave 2a - Timelistelinjer som er lagt inn for timeliste nummer 3
+select * from timelistelinje
+where timelistenr = 3;
+
+-- Oppgave 2b - Hvor mange timelister det er.
+select count(*) as antallTimelister
+from timeliste;
+
+-- Oppgave 2c - Hvor mange timelister som det ikke er utbetalt penger for
+select count(*) as ikkeBetalte from timeliste
+where NOT status='utbetalt';
+
+/* Oppgave 2d - Antall timelister for hver status, dvs. hvor mange timelister som er utbetalt, levert og aktiv. Ta
+med statusen og antall timelister i resultatet.*/
+select count(*) as antallTimelister, status from timeliste
+group by status;
+
+-- Oppgave 2e - antall timelistelinjer, og antall timelistelinjer med en pauseverdi.*/
+SELECT COUNT (*) AS antallTimelistelinjer, count(pause) AS antallmedpause
+FROM timelistelinje
+WHERE pause IS NOT NULL;
+
+-- Oppgave 2f - Alle timelistelinjer som ikke har pauseverdier (der pause er satt til null)
+SELECT * FROM timelsitelinje
+WHERE pause IS NULL;
+
+/* Oppgave 3a - Antall timer som det ikke er utbetalt penger for. Her kan det også være lurt å ta i bruk et av
+viewene.*/
+-- Prøvde denne men denne ga timeantall hvor hver av timelistenrene. Derfor prøvde jeg en annen variant
+select timelistenr, utbetalt, sum(Timeantall) from timeliste
+natural join Timeantall where utbetalt IS NULL group by timelistenr;
+
+select sum(var.varighet) / (cast(60 as float)) as ubetaltTid
+from (
+  select timelistenr
+  from timeliste
+  where utbetalt IS NULL) as antall
+  inner join varighet as var on antall.timelistenr = var.timelistenr
+where var.timelistenr = antall.timelistenr;
+
+/* Oppgave 3b - Hvilke timelister (nr og beskrivelse) har en timelistelinje med en beskrivelse som inneholder
+«test» eller «Test». Ikke vis duplikater. */
+select distinct t.timelistenr, t.beskrivelse from timeliste t
+left join timelistelinje ti ON t.timelistenr = ti.timelistenr 
+WHERE ti.beskrivelse LIKE '%est%';
+
+/* Oppgave 3c - Timelistelinjene med lengst varighet. Sorter etter varighet i synkende rekkefølge
+(størst verdier først), og ta kun med de 5 linjene med lengst varighet. Skriv ut timelistenr,
+linjenr, varighet og beskrivelse for dis se linjene. */
+select timelistenr, linjenr, varighet, beskrivelse from timelistelinje
+natural join varighet order by varighet DESC limit 5;
+
+
+/* Oppgave 3d - Antall timelistelinjer per timeliste. Ta også med timelister som har 0 linjer. Ta med timelistenr og
+antall i resultatet.*/
+select count(timelistelinje.timelistenr) as antallTimelistelinjer, timeliste.timelistenr
+from timelistelinje right JOIN timeliste ON timelistelinje.timelistenr = timeliste.timelistenr
+group by timeliste.timelistenr
+order by timelistenr ASC;
+
+
+/* Oppgave 3e - Hvor mye penger som har blitt utbetalt, dersom man blir utbetalt 200 kr per time. Tips: Finn
+først antall timer som det er utbetalt penger for (ref oppg 3a).*/
+/*Provde to varianter forst denne */
+select sum(t.timeantall*200)
+AS utbetaltPenger
+FROM timeliste t
+INNER JOIN timeantall timer
+ON t.timelistenr = timer.timelistenr
+WHERE t.utbetalt IS NOT NULL;
+
+
+/* Oppgave 3f - Antall timelistelinjer som ikke har pauseverdi per timeliste. Vis kun timelister med 4 eller flere
+slike timelistelinjer. Ta med timelistenr og antall i resultatet.*/
+select count(timeListe.timelistenr) as antallTimelister, t.timelistenr
+from timelistelinje timeListe
+INNER JOIN timeliste t
+ON timeListe.timelistenr = t.timelistenr
+where timeListe.pause IS null
+GROUP BY t.timelistenr
+HAVING count(timeListe.timelistenr) >= 4
+ORDER BY t.timelistenr ASC;
